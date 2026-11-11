@@ -14,7 +14,7 @@ npx honeyvid skills list
 
 The installer copies owned skill files into `~/.claude/skills/<name>/` and/or `~/.codex/skills/<name>/` and prints the paths. Use `--dir` for a custom destination. It overwrites only files it owns.
 
-For the public skills repository, once published:
+Or install from this repository with the [skills](https://skills.sh) CLI:
 
 ```sh
 npx skills add honeyvid/skills

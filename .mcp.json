@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "honeyvid": {
+      "type": "http",
+      "url": "https://honeyvid.ai/mcp"
+    }
+  }
+}

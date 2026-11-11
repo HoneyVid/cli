@@ -2,23 +2,19 @@
 
 Use HoneyVid from Claude Code, Codex, Cursor, shell scripts, or another agent. Create from a template or use Playground video and image models with your own prompt, settings, and reference photos. Generation uses account credits and usually takes 2–10 minutes.
 
-Node.js 20 or newer. Plain ESM, no build step, no runtime dependencies. This package is not published yet. Run it from this checkout:
+Node.js 20 or newer. Plain ESM, no build step, no runtime dependencies. Published on npm as [`honeyvid`](https://www.npmjs.com/package/honeyvid):
 
 ```sh
-node packages/cli/bin/honeyvid.mjs --help
-node packages/cli/bin/honeyvid.mjs schema
-```
-
-When published, installation and invocation will be:
-
-```sh
+npx honeyvid --help
+# Or install globally:
 npm install -g honeyvid
 honeyvid --help
-# Or, without a global install:
-npx honeyvid --help
+honeyvid schema
 ```
 
-Until publication, replace `honeyvid` below with `node packages/cli/bin/honeyvid.mjs`. Do not run `npx honeyvid` to test this unpublished checkout; it could fetch another package.
+Prefer a remote MCP connection instead? Add `https://honeyvid.ai/mcp` (Streamable HTTP, OAuth, no API key) to your MCP client. Setup for every app: https://honeyvid.ai/mcp
+
+Claude Code users can also install this repository as a plugin: it brings the MCP server (`.mcp.json`) and the HoneyVid skills (`skills/`).
 
 ## Sign in
 
@@ -214,4 +210,4 @@ node packages/cli/bin/honeyvid.mjs --help
 node packages/cli/bin/honeyvid.mjs schema
 ```
 
-Tests start a local fake HTTP server and use temporary config directories. They do not call a real account, spend credits, or generate real videos. The CLI is outside the root TypeScript/Vite build. Do not publish this package until the server OAuth, quote, price-ceiling, and retry contracts are deployed and tested together.
+Tests start a local fake HTTP server and use temporary config directories. They do not call a real account, spend credits, or generate real videos. The CLI is outside the root TypeScript/Vite build.
