@@ -32,5 +32,11 @@
   },
   "bugs": {
     "url": "https://github.com/HoneyVid/cli/issues"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^5.0.5"
   }
 }

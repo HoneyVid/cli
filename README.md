@@ -14,7 +14,7 @@ honeyvid schema
 
 Prefer a remote MCP connection instead? Add `https://honeyvid.ai/mcp` (Streamable HTTP, OAuth, no API key) to your MCP client. Setup for every app: https://honeyvid.ai/mcp
 
-Claude Code users can also install this repository as a plugin: it brings the MCP server (`.mcp.json`) and the HoneyVid skills (`skills/`).
+Claude Code users can install the HoneyVid plugin (MCP server plus skills) from [HoneyVid/skills](https://github.com/HoneyVid/skills): `/plugin marketplace add HoneyVid/skills`, then `/plugin install honeyvid@honeyvid`.
 
 ## Sign in
 
@@ -200,14 +200,18 @@ honeyvid setup cursor
 
 Setup also suggests `honeyvid skills install`. The endpoint is `<base>/mcp`. Claude setup prints `claude mcp add --transport http honeyvid <url>`; `--apply` runs it if Claude is on PATH. Codex setup prints the `~/.codex/config.toml` block. Cursor setup prints the `~/.cursor/mcp.json` block. The CLI never edits these config files itself.
 
-## Development checks
+## Development
 
-From the repository root, using the existing dependencies:
+This repository is the source of the `honeyvid` CLI; pull requests are welcome.
 
 ```sh
-npx vitest run tests/cli/cli.test.ts
-node packages/cli/bin/honeyvid.mjs --help
-node packages/cli/bin/honeyvid.mjs schema
+npm ci --ignore-scripts
+scripts/fetch-skills.sh   # copies HoneyVid/skills at the commit in skills.ref into ./skills
+npm test
+node bin/honeyvid.mjs --help
+node bin/honeyvid.mjs schema
 ```
 
-Tests start a local fake HTTP server and use temporary config directories. They do not call a real account, spend credits, or generate real videos. The CLI is outside the root TypeScript/Vite build.
+Tests start a local fake HTTP server and use temporary config directories. They do not call a real account, spend credits, or generate real videos.
+
+**Releasing:** bump `version` in `package.json` and merge to `main`. The Release workflow publishes to npm by trusted publishing (no tokens) with the skills pinned in `skills.ref`. Changing `server.json` (bump its `version`) republishes the official MCP Registry entry `ai.honeyvid/honeyvid`.
