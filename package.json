@@ -1,6 +1,6 @@
 {
   "name": "honeyvid",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Make viral AI videos with HoneyVid from Claude Code, Codex, Cursor or any script",
   "type": "module",
   "bin": {
