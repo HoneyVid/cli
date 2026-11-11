@@ -1,9 +1,0 @@
-{
-  "name": "honeyvid",
-  "description": "Put anyone in a viral AI video, or generate with Kling, Veo and more, straight from your agent.",
-  "author": { "name": "Beundra AB" },
-  "homepage": "https://honeyvid.ai/mcp",
-  "repository": "https://github.com/HoneyVid/cli",
-  "license": "MIT",
-  "keywords": ["ai-video", "video-generation", "mcp", "skills"]
-}
