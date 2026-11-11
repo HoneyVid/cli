@@ -1,0 +1,36 @@
+{
+  "name": "honeyvid",
+  "version": "0.3.1",
+  "description": "Make viral AI videos with HoneyVid from Claude Code, Codex, Cursor or any script",
+  "type": "module",
+  "bin": {
+    "honeyvid": "bin/honeyvid.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "bin/",
+    "lib/",
+    "skills/",
+    "README.md",
+    "LICENSE"
+  ],
+  "license": "MIT",
+  "keywords": [
+    "honeyvid",
+    "ai video",
+    "mcp",
+    "cli",
+    "agents"
+  ],
+  "homepage": "https://honeyvid.ai/mcp",
+  "author": "Beundra AB",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HoneyVid/cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/HoneyVid/cli/issues"
+  }
+}
