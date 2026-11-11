@@ -1,0 +1,9 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "ai.honeyvid/honeyvid",
+  "title": "HoneyVid",
+  "description": "Put anyone in a viral AI video, or generate with Kling, Veo and more, straight from your agent.",
+  "repository": { "url": "https://github.com/HoneyVid/cli", "source": "github" },
+  "version": "1.0.0",
+  "remotes": [{ "type": "streamable-http", "url": "https://honeyvid.ai/mcp" }]
+}
