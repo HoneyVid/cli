@@ -100,6 +100,19 @@ cliHarness(h => {
     expect(completed.code).toBe(0);
     expect(h.parse(completed).data.job).toMatchObject({ id: 'job-1', status: 'completed', accountUrl: `${h.base}/videos?job=job-1` });
   });
+  it.each(['video', 'image'])('encodes %s account links on the configured origin', async kind => {
+    await h.login();
+    const id = 'saved /image?view=all&owner=me#part';
+    h.forcedError = { status: 200, body: { job: { id, status: 'completed', credits: 12,
+      ...(kind === 'image' ? { kind } : {}), accountUrl: 'https://other.example/private' } } };
+    const result = await h.run(['video', id]);
+    expect(result.code, result.stdout).toBe(0);
+    const accountUrl = new URL(String((h.parse(result).data.job as { accountUrl: string }).accountUrl));
+    expect(accountUrl.origin).toBe(h.base);
+    expect(accountUrl.pathname).toBe(kind === 'image' ? '/playground' : '/videos');
+    expect([...accountUrl.searchParams]).toEqual(kind === 'image' ? [['mode', 'image'], ['image_job', id]] : [['job', id]]);
+    expect(accountUrl.hash).toBe('');
+  });
   it('waits for completion and downloads to the requested file', async () => {
     await h.login();
     const output = join(h.directory, 'video.mp4');
