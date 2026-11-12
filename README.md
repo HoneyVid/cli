@@ -133,7 +133,9 @@ honeyvid video '<image-job-id>'
 honeyvid video '<image-job-id>' --wait --output ./image.png
 ```
 
-Image job output includes image URLs. The first image is saved at `--output`; more images use `image-2.png`, `image-3.png`, and so on. Results include `path` for the first download and `paths` for all downloads. Existing files are preserved. In a terminal, `models` prints a compact table; `--model` prints the full schema. Piped output and `--json` always use JSON envelopes.
+Every job returned by create, generate, retry, video, or videos includes `accountUrl`. Share this lasting link with the user to open the saved result in their HoneyVid account after sign-in. `resultUrl` and image URLs are temporary links for previews and downloads; their expiry does not delete saved media. Read the job again to refresh them without generating or paying again.
+
+Image job output also includes image URLs. The first image is saved at `--output`; more images use `image-2.png`, `image-3.png`, and so on. Results include `path` for the first download and `paths` for all downloads. Existing files are preserved. In a terminal, `models` prints a compact table; `--model` prints the full schema. Piped output and `--json` always use JSON envelopes.
 
 ## Agent skills
 
