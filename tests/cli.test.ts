@@ -92,13 +92,26 @@ cliHarness(h => {
     h.queuedCreate = true;
     const created = await h.run(['create', '--template', 'dance', '--character', 'char-1', '--quality', 'standard', '--max-credits', '12']);
     expect(created.code, created.stdout).toBe(0);
-    expect(h.parse(created).data.job).toMatchObject({ id: 'job-1', status: 'processing' });
+    expect(h.parse(created).data.job).toMatchObject({ id: 'job-1', status: 'processing', accountUrl: `${h.base}/videos?job=job-1` });
     const listed = await h.run(['videos', '--status', 'processing']);
     expect(listed.code, listed.stdout).toBe(0);
-    expect(h.parse(listed).data.jobs).toEqual([expect.objectContaining({ id: 'job-1', status: 'processing' })]);
+    expect(h.parse(listed).data.jobs).toEqual([expect.objectContaining({ id: 'job-1', status: 'processing', accountUrl: `${h.base}/videos?job=job-1` })]);
     const completed = await h.run(['video', 'job-1', '--wait']);
     expect(completed.code).toBe(0);
-    expect(h.parse(completed).data.job).toMatchObject({ id: 'job-1', status: 'completed' });
+    expect(h.parse(completed).data.job).toMatchObject({ id: 'job-1', status: 'completed', accountUrl: `${h.base}/videos?job=job-1` });
+  });
+  it.each(['video', 'image'])('encodes %s account links on the configured origin', async kind => {
+    await h.login();
+    const id = 'saved /image?view=all&owner=me#part';
+    h.forcedError = { status: 200, body: { job: { id, status: 'completed', credits: 12,
+      ...(kind === 'image' ? { kind } : {}), accountUrl: 'https://other.example/private' } } };
+    const result = await h.run(['video', id]);
+    expect(result.code, result.stdout).toBe(0);
+    const accountUrl = new URL(String((h.parse(result).data.job as { accountUrl: string }).accountUrl));
+    expect(accountUrl.origin).toBe(h.base);
+    expect(accountUrl.pathname).toBe(kind === 'image' ? '/playground' : '/videos');
+    expect([...accountUrl.searchParams]).toEqual(kind === 'image' ? [['mode', 'image'], ['image_job', id]] : [['job', id]]);
+    expect(accountUrl.hash).toBe('');
   });
   it('waits for completion and downloads to the requested file', async () => {
     await h.login();
@@ -286,7 +299,7 @@ cliHarness(h => {
     const result = await h.run(['generate', 'image', '--model', 'image-model', '--prompt', 'Honey jar',
       '--image', 'char-1', '--set', 'size=square', '--max-credits', '12', '--wait', '--output', output]);
     expect(result.code, result.stdout || result.stderr).toBe(0);
-    expect(h.parse(result).data).toMatchObject({ job: { kind: 'image', images: [`${h.base}/result.png`, `${h.base}/second.png`] },
+    expect(h.parse(result).data).toMatchObject({ job: { kind: 'image', accountUrl: `${h.base}/playground?mode=image&image_job=image-1`, images: [`${h.base}/result.png`, `${h.base}/second.png`] },
       path: output, paths: [output, join(h.directory, 'image-2.png')] });
     expect(await readFile(output, 'utf8')).toBe('first image');
     expect(await readFile(join(h.directory, 'image-2.png'), 'utf8')).toBe('second image');
@@ -299,12 +312,12 @@ cliHarness(h => {
     await h.login();
     const listed = await h.run(['videos', '--kind', 'image']);
     expect(listed.code, listed.stdout).toBe(0);
-    expect(h.parse(listed).data.jobs).toEqual([expect.objectContaining({ id: 'image-1', kind: 'image' })]);
+    expect(h.parse(listed).data.jobs).toEqual([expect.objectContaining({ id: 'image-1', kind: 'image', accountUrl: `${h.base}/playground?mode=image&image_job=image-1` })]);
     expect(h.jobQueries).toEqual(['?kind=image']);
     const output = join(h.directory, 'saved.png');
     const result = await h.run(['video', 'image-1', '--output', output]);
     expect(result.code, result.stdout).toBe(0);
-    expect(h.parse(result).data).toMatchObject({ job: { images: [`${h.base}/result.png`, `${h.base}/second.png`] }, path: output });
+    expect(h.parse(result).data).toMatchObject({ job: { accountUrl: `${h.base}/playground?mode=image&image_job=image-1`, images: [`${h.base}/result.png`, `${h.base}/second.png`] }, path: output });
     expect(await readFile(join(h.directory, 'saved-2.png'), 'utf8')).toBe('second image');
   });
 
