@@ -137,6 +137,31 @@ Every job returned by create, generate, retry, video, or videos includes `accoun
 
 Image job output also includes image URLs. The first image is saved at `--output`; more images use `image-2.png`, `image-3.png`, and so on. Results include `path` for the first download and `paths` for all downloads. Existing files are preserved. In a terminal, `models` prints a compact table; `--model` prints the full schema. Piped output and `--json` always use JSON envelopes.
 
+## Edit videos live
+
+Combine your videos, images and character photos on a timeline in the HoneyVid editor. The user watches at the project's watch URL while the agent edits: every change appears in their browser as it lands, with the agent's notes. Export to MP4 happens in the browser; the user clicks export in the editor. Editing never spends credits.
+
+```sh
+honeyvid edit create --name 'Launch cut' --video '<job-id>' --source 'character:<character-id>'
+honeyvid edit open '<project-id>'            # Prints the watch URL; opens it in a terminal
+honeyvid edit show '<project-id>'            # Tracks and clips with ids, at/start/end in seconds
+honeyvid edit apply '<project-id>' --base-version 3 --note 'Tightened the intro' \
+  --ops '[{"type":"trim","clip":1,"start":0.5},{"type":"split","clip":2,"at":4}]'
+honeyvid edit apply '<project-id>' --ops @ops.json
+cat ops.json | honeyvid edit apply '<project-id>' --ops -
+honeyvid edit note '<project-id>' 'Adding the outro next' --tone info
+honeyvid edit list
+```
+
+Every edit command returns `watchUrl` (`<base>/editor/<id>`). Give it to the user first, so they can watch. `edit create` makes the project, then appends each `--video <job-id>` (source key `job:<id>`) and `--source <key>` in the order given, in one request. Source keys are `job:<id>`, `image:<jobId>:<i>`, `character:<id>`, and `file:<id>` (a file stored in the project).
+
+Read before editing: `edit show` prints the timeline in a terminal and the full state, including `version`, as JSON. `edit apply` sends 1–50 ops (up to 64 KB) as a JSON array, a single op, or `{ops:[...]}`, inline, from `@file`, or from stdin with `-`. It returns `summaries`, the new `version`, and the `changed` clip and track ids. Ops:
+
+- `{"type":"add_clip","key":"job:<id>","track":"fit","at":0,"start":0,"end":5}`: `track` is a track id, `"new"` or `"fit"` (default); `at` defaults to the end of the timeline. A `file:` video or audio not yet on the timeline needs `end`. Stills default to 5 seconds. A video with sound also places its audio.
+- `{"type":"split","clip":1,"at":2.5}`, `{"type":"delete","clips":[1,2]}`, `{"type":"move","clip":1,"at":4,"track":2}`, `{"type":"trim","clip":1,"start":0.5,"end":3}`, `{"type":"level","track":2,"volume":0.5,"muted":false}`.
+
+Ops apply atomically. An invalid op fails with code `invalid_op`, its `index`, and nothing is written. With `--base-version`, a project changed by the user or another agent fails with code `stale` (exit 5) and the current `version`: run `edit show`, then apply again. Agents may apply up to 120 ops per minute per project; beyond that, exit 5 with `rate_limited` and `retryAfter`. There are no undo ops; the user can undo in the browser.
+
 ## Agent skills
 
 ```sh
@@ -166,9 +191,9 @@ Failures print one envelope to stdout and exit nonzero:
 {"ok":false,"error":{"code":"not_signed_in","message":"You are not signed in.","suggestion":"Run honeyvid login.","retryable":false}}
 ```
 
-Errors can also contain `idempotencyKey`, `jobId`, and `retryAfter` (seconds). `retryable` describes the error; the CLI does not automatically retry it. Never parse stderr as data. Help is plain text. `schema` returns all commands, flags, enums, constraints, output shapes, environment variables, and exit codes in `data`. Every command has `--help`, examples, environment variables, and exit codes.
+Errors can also contain `idempotencyKey`, `jobId`, `retryAfter` (seconds), and for edit commands `projectId`, `watchUrl`, `version` (on `stale`) and `index` (on `invalid_op`). `retryable` describes the error; the CLI does not automatically retry it. Never parse stderr as data. Help is plain text. `schema` returns all commands, flags, enums, constraints, output shapes, environment variables, and exit codes in `data`. Every command has `--help`, examples, environment variables, and exit codes.
 
-Known API error codes are `price_above_max` (409 with credits), `insufficient_credits` (402), `rate_limited` (429), `generation_closed`, `not_found` (404), and `forbidden` (403). Their exit codes follow the table below: credit, limit and conflict errors use 5; forbidden uses 1.
+Known API error codes are `price_above_max` (409 with credits), `insufficient_credits` (402), `rate_limited` (429), `generation_closed`, `stale` (409 edit conflict), `invalid_op` (400 edit op), `not_found` (404), and `forbidden` (403). Their exit codes follow the table below: credit, limit and conflict errors use 5; forbidden uses 1.
 
 | Exit | Meaning | Agent action |
 | --- | --- | --- |

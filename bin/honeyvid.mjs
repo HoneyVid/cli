@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { parseArgs, help } from '../lib/schema.mjs';
 import { modelTable } from '../lib/playground.mjs';
 import { run } from '../lib/commands.mjs';
+import { editTable } from '../lib/edit.mjs';
 import { CliError, safeUrl } from '../lib/errors.mjs';
 
 export async function main(argv = process.argv.slice(2)) {
@@ -18,7 +19,8 @@ export async function main(argv = process.argv.slice(2)) {
       const base = url.href.replace(/\/+$/, '');
       const data = await run(command, args, options, base);
       process.stdout.write(command === 'models' && !options.model && !compact ? modelTable(data.models)
-        : `${JSON.stringify({ ok: true, data }, null, compact ? undefined : 2)}\n`);
+        : command === 'edit show' && !compact ? editTable(data)
+          : `${JSON.stringify({ ok: true, data }, null, compact ? undefined : 2)}\n`);
     }
   } catch (error) {
     // Never print raw fetch errors, URLs with signed query strings, or token responses.
