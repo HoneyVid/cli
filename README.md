@@ -63,7 +63,7 @@ honeyvid characters add --url 'https://example.com/face.jpg' --name Alex
 honeyvid characters
 honeyvid quote --template '<template-id>' --quality standard
 honeyvid create --template '<template-id>' --character '<character-id>' \
-  --quality standard --max-credits 50 --idempotency-key 'my-video-001' \
+  --quality standard --max-credits 500 --idempotency-key 'my-video-001' \
   --wait --timeout 600 --output ./video.mp4
 ```
 
@@ -82,7 +82,7 @@ honeyvid video '<job-id>' --wait --timeout 600
 honeyvid job '<job-id>'                 # Alias for video
 honeyvid videos --status completed --limit 10
 honeyvid download '<job-id>'            # ./honeyvid-<id>.mp4
-honeyvid retry '<failed-job-id>' --max-credits 50 \
+honeyvid retry '<failed-job-id>' --max-credits 500 \
   --idempotency-key 'my-retry-001' --wait
 honeyvid account                       # Credits, plan, topUpUrl
 ```
@@ -95,7 +95,7 @@ For your own source video:
 honeyvid upload ./clip.mp4
 honeyvid quote --upload '<upload-id>' --quality standard
 honeyvid create --upload '<upload-id>' --character '<character-id>' \
-  --quality standard --max-credits 50 --wait --output ./my-video.mp4
+  --quality standard --max-credits 500 --wait --output ./my-video.mp4
 ```
 
 Use an MP4 up to 100 MB and 3–30 seconds. Uploads stream as raw `video/mp4` with a content length, not multipart. Own-video generation may be unavailable for the account. Choose exactly one of `--template` and `--upload`.
@@ -110,14 +110,14 @@ honeyvid models --kind image
 honeyvid models --model '<model-id>' --json
 honeyvid characters add ./reference.jpg --name Reference
 honeyvid generate video --model '<model-id>' --prompt 'A honey river at sunrise' \
-  --set duration=5 --image '<character-id>:start' --max-credits 50 --dry-run
+  --set duration=5 --image '<character-id>:start' --max-credits 500 --dry-run
 honeyvid generate video --model '<model-id>' --prompt 'A honey river at sunrise' \
-  --set duration=5 --image '<character-id>:start' --max-credits 50 \
+  --set duration=5 --image '<character-id>:start' --max-credits 500 \
   --idempotency-key 'playground-video-001' --wait --timeout 600 --output ./river.mp4
 honeyvid generate image --model '<image-model-id>' --prompt 'A honey jar in warm light' \
-  --image '<character-id>' --max-credits 50 --dry-run
+  --image '<character-id>' --max-credits 500 --dry-run
 honeyvid generate image --model '<image-model-id>' --prompt 'A honey jar in warm light' \
-  --image '<character-id>' --max-credits 50 \
+  --image '<character-id>' --max-credits 500 \
   --idempotency-key 'playground-image-001' --wait --output ./jar.png
 ```
 
