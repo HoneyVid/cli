@@ -84,8 +84,11 @@ honeyvid videos --status completed --limit 10
 honeyvid download '<job-id>'            # ./honeyvid-<id>.mp4
 honeyvid retry '<failed-job-id>' --max-credits 500 \
   --idempotency-key 'my-retry-001' --wait
+honeyvid retry '<failed-job-id>' --model kling-4-flash --max-credits 500 --wait
 honeyvid account                       # Credits, plan, topUpUrl
 ```
+
+Retry reuses the failed job's inputs. Without `--model` or `--pick` it runs the saved model; `--model` switches a Playground video, image or upscale job to another model ID and `--pick` switches a template or upload job to another choice. Quote the new model first and pass its price as `--max-credits`. Repeating the same job and choice never charges twice.
 
 Wait checks every five seconds and writes progress to stderr. A timeout stops waiting; it does not cancel generation. Output paths are absolute in results. The response Content-Type sets the file extension; a mismatched extension is replaced and the actual path is reported on stderr and in JSON. Downloads stream to a temporary file, never overwrite an existing destination, and remove partial files on failure. `--output` on create, video, or retry downloads after completion; add `--wait` if the video is processing.
 
@@ -98,7 +101,9 @@ honeyvid create --upload '<upload-id>' --character '<character-id>' \
   --quality standard --max-credits 500 --wait --output ./my-video.mp4
 ```
 
-Use an MP4 up to 100 MB and 3–30 seconds. Uploads stream as raw `video/mp4` with a content length, not multipart. Own-video generation may be unavailable for the account. Choose exactly one of `--template` and `--upload`.
+Use an MP4 up to 100 MB and 3–30 seconds. Uploads stream as raw `video/mp4` with a content length, not multipart. Choose exactly one of `--template` and `--upload`.
+
+Templates and uploads offer several models per quality. `template` and `quote` list them; add `--pick '<choice>'` to `quote` and `create` to use one other than the default.
 
 ## Playground flow
 
@@ -119,11 +124,13 @@ honeyvid generate image --model '<image-model-id>' --prompt 'A honey jar in warm
 honeyvid generate image --model '<image-model-id>' --prompt 'A honey jar in warm light' \
   --image '<character-id>' --max-credits 500 \
   --idempotency-key 'playground-image-001' --wait --output ./jar.png
+honeyvid generate video --model upscale-topaz --video 'upload:<upload-id>' \
+  --set resolution=4k --max-credits 500 --dry-run
 ```
 
 The settings above are examples; use fields returned by `models --model` for the selected model. Repeat `--set key=value` for each setting. Numbers (including decimals, negatives, and exponents) and lowercase `true`/`false` become JSON numbers and booleans. Other values stay strings. Duplicate setting keys are rejected. Video references accept `--image <character-id>[:start|end|ref]`; image generation accepts character IDs without roles. Repeat `--image` for more references. If the model accepts a source video, add `--video upload:<id>` or `--video template:<id>`.
 
-Both generate commands require `--model`, `--prompt`, and `--max-credits`, including for `--dry-run`. A dry run calls the free Playground quote endpoint and returns `credits`, `balance`, and `estimatedSeconds`; it creates no job. A real run sends the cap to the server. A price above it returns exit 5 without charging. Quotes do not reserve prices.
+Both generate commands require `--model` and `--max-credits`, including for `--dry-run`. Send `--prompt` for every model whose `prompt.required` is true; leave it out for models with a prompt limit of 0, such as the upscalers and Wan 2.2 Animate. A dry run calls the free Playground quote endpoint and returns `credits`, `balance`, and `estimatedSeconds`; it creates no job. A real run sends the cap to the server. A price above it returns exit 5 without charging. Quotes do not reserve prices.
 
 Generate prints a caller-supplied or generated idempotency key before submitting and returns it in success or error JSON. Reuse the same key and inputs after an uncertain outcome. Waiting and downloading work like template creation.
 

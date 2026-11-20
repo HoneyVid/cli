@@ -36,7 +36,7 @@ cliHarness(h => {
       { path: '/api/edits', body: { name: 'Launch cut' } },
       { path: '/api/edits/edit-1/actions', body: { ops: [
         { type: 'add_clip', key: 'character:char-1' }, { type: 'add_clip', key: 'job:job-1' }, { type: 'add_clip', key: 'image:image-1:0' },
-      ] } },
+      ], baseVersion: 1 } },
     ]);
   });
 
@@ -67,7 +67,7 @@ cliHarness(h => {
     const table = await h.run(['edit', 'show', 'edit-1'], {}, ['--import', bootstrap]);
     expect(table.code, table.stdout).toBe(0);
     expect(table.stdout).not.toContain('"ok"');
-    for (const text of ['Project edit-1 "Launch cut" · version 3 · 7.5s', `Watch: ${watch()}`, 'Track 1', 'Track 2 muted volume 0.5']) {
+    for (const text of ['Project edit-1 "Launch cut" · version 3 · 7.5s', `Watch: ${watch()}`, 'Track 1 (video)', 'Track 2 (audio) muted volume 0.5']) {
       expect(table.stdout).toContain(text);
     }
     const lines = table.stdout.split('\n');

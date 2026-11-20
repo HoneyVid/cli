@@ -6,14 +6,19 @@ export const playgroundModels = [
   { id: 'image-model', name: 'Image model', kind: 'image', prompt: { max: 1000, required: true }, images: { max: 2 },
     fields: [{ key: 'size', label: 'Size', type: 'choice', options: [{ value: 'square', label: 'Square' }] }] },
 ];
-export const editProject = { id: 'edit-1', name: 'Launch cut', version: 3, seconds: 7.5, updatedAt: '2026-11-12T10:00:00.000Z' };
+export const editProject = { id: 'edit-1', name: 'Launch cut', version: 3, seconds: 7.5, posterUrl: null, createdAt: '2026-11-12T09:00:00.000Z', updatedAt: '2026-11-12T10:00:00.000Z' };
 export const editDoc = {
-  sources: { 'job:job-1': { kind: 'video', name: 'Honey dance', max: 5 }, 'character:char-1': { kind: 'image', name: 'Alex', max: null } },
-  tracks: [{ id: 1, volume: 1, muted: false }, { id: 2, volume: 0.5, muted: true }],
-  clips: [
-    { id: 2, track: 1, key: 'character:char-1', at: 5, start: 0, end: 2.5 },
-    { id: 1, track: 1, key: 'job:job-1', at: 0, start: 0, end: 5 },
-    { id: 3, track: 2, key: 'job:job-1', at: 0, start: 1.25, end: 5 },
+  v: 1,
+  edit: { next: 6, tracks: [
+    { id: 1, kind: 'video', muted: false, volume: 1, clips: [
+      { id: 2, source: 2, at: 5, start: 0, end: 2.5, max: null },
+      { id: 1, source: 1, at: 0, start: 0, end: 5, max: 5 },
+    ] },
+    { id: 2, kind: 'audio', muted: true, volume: 0.5, clips: [{ id: 3, source: 1, at: 0, start: 1.25, end: 5, max: 5 }] },
+  ] },
+  sources: [
+    { id: 1, key: 'job:job-1', kind: 'video', name: 'Honey dance' },
+    { id: 2, key: 'character:char-1', kind: 'image', name: 'Alex' },
   ],
 };
 export const template = {

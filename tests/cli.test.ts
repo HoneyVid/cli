@@ -182,6 +182,7 @@ cliHarness(h => {
       ['quote', '--template', 'dance', '--upload', 'upload-1', '--quality', 'standard'],
       ['create', '--template', 'dance', '--character', 'char-1', '--quality', 'standard'],
       ['create', '--template', 'dance', '--character', 'char-1', '--quality', 'standard', '--max-credits', '12', '--idempotency-key', 'bad'],
+      ['retry', 'job-1', '--max-credits', '12', '--model', 'kling-4', '--pick', 'kling-4'],
     ]) {
       const result = await h.run(args);
       expect(result.code, result.stdout).toBe(2);
@@ -195,6 +196,21 @@ cliHarness(h => {
     expect(result.code, result.stdout).toBe(0);
     expect(h.parse(result).data.idempotencyKey).toBe('agent-retry-1');
     expect(h.jobPosts).toEqual([{ path: '/api/jobs/job-1/retry', key: 'agent-retry-1', body: { maxCredits: 12 } }]);
+    const switched = await h.run(['retry', 'job-1', '--max-credits', '12', '--model', 'kling-4-flash', '--idempotency-key', 'agent-retry-2']);
+    expect(switched.code, switched.stdout).toBe(0);
+    expect(h.jobPosts[1]).toEqual({ path: '/api/jobs/job-1/retry', key: 'agent-retry-2', body: { maxCredits: 12, model: 'kling-4-flash' } });
+    const create = await h.run(['create', '--template', 'dance', '--character', 'char-1', '--quality', 'standard', '--pick', 'kling-4',
+      '--max-credits', '12', '--idempotency-key', 'agent-create-1']);
+    expect(create.code, create.stdout).toBe(0);
+    expect(h.jobPosts[2].body).toMatchObject({ templateId: 'dance', characterId: 'char-1', pick: 'kling-4' });
+  });
+  it('generates without a prompt for models that take none, such as upscalers', async () => {
+    await h.login();
+    const result = await h.run(['generate', 'video', '--model', 'upscale-topaz', '--video', 'upload:upload-1', '--max-credits', '12',
+      '--idempotency-key', 'upscale-key-1']);
+    expect(result.code, result.stdout).toBe(0);
+    expect(h.jobPosts).toEqual([{ path: '/api/playground/jobs', key: 'upscale-key-1', body: {
+      model: 'upscale-topaz', settings: {}, images: [], video: { source: 'upload', id: 'upload-1' }, maxCredits: 12 } }]);
   });
   it('replays an unauthorized create with the same idempotency key', async () => {
     await h.login();
