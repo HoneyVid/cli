@@ -144,6 +144,20 @@ Every job returned by create, generate, retry, video, or videos includes `accoun
 
 Image job output also includes image URLs. The first image is saved at `--output`; more images use `image-2.png`, `image-3.png`, and so on. Results include `path` for the first download and `paths` for all downloads. Existing files are preserved. In a terminal, `models` prints a compact table; `--model` prints the full schema. Piped output and `--json` always use JSON envelopes.
 
+## Upscale, reuse and manage results
+
+```sh
+honeyvid upscale '<job-id>' --dry-run           # Upscalers with credits per target
+honeyvid upscale '<job-id>' --upscaler topaz --target 4k --max-credits 500 \
+  --idempotency-key 'upscale-001' --wait --output ./video-4k.mp4
+honeyvid characters from-image '<image-job-id>' --index 0   # Animate a generated image next
+honeyvid uploads                                 # Earlier source videos for --video upload:<id>
+honeyvid cancel '<job-id>'                       # Not started yet: full refund
+honeyvid videos --before '<createdAt>'           # Older results
+```
+
+Upscaling makes a new 1080p or 4K video and keeps the original. Pick an upscaler ID and target from `--dry-run`, and pass its credits as `--max-credits`. `characters from-image` returns a character ID to use with `generate video --image '<id>:start'` or as a reference; saving the same image twice returns the same character. `cancel` works only before a job starts.
+
 ## Edit videos live
 
 Combine your videos, images and character photos on a timeline in the HoneyVid editor. The user watches at the project's watch URL while the agent edits: every change appears in their browser as it lands, with the agent's notes. Export to MP4 happens in the browser; the user clicks export in the editor. Editing never spends credits.

@@ -204,6 +204,26 @@ cliHarness(h => {
     expect(create.code, create.stdout).toBe(0);
     expect(h.jobPosts[2].body).toMatchObject({ templateId: 'dance', characterId: 'char-1', pick: 'kling-4' });
   });
+  it('upscales a finished video, cancels, saves a generated image as a character, lists uploads and pages videos', async () => {
+    await h.login();
+    const options = await h.run(['upscale', 'job-1', '--dry-run']);
+    expect(options.code, options.stdout).toBe(0);
+    expect(h.parse(options).data.options[0]).toMatchObject({ id: 'topaz', targets: [{ target: '1080p', credits: 30 }, { target: '4k', credits: 60 }] });
+    expect(h.jobPosts).toHaveLength(0);
+    expect((await h.run(['upscale', 'job-1', '--upscaler', 'topaz', '--target', '8k', '--max-credits', '60'])).code).toBe(2);
+    expect((await h.run(['upscale', 'job-1', '--upscaler', 'topaz', '--target', '4k'])).code).toBe(2);
+    const made = await h.run(['upscale', 'job-1', '--upscaler', 'topaz', '--target', '4k', '--max-credits', '60', '--idempotency-key', 'upscale-cli-1']);
+    expect(made.code, made.stdout).toBe(0);
+    expect(h.jobPosts).toEqual([{ path: '/api/jobs/job-1/upscale', key: 'upscale-cli-1', body: { upscaler: 'topaz', target: '4k', maxCredits: 60 } }]);
+    expect(h.parse(await h.run(['cancel', 'job-1'])).data).toMatchObject({ canceled: true, credits: 12 });
+    expect(h.parse(await h.run(['characters', 'from-image', 'image-1', '--index', '2'])).data).toMatchObject({ character: { id: 'char-gen' } });
+    expect(h.jobPosts.slice(1)).toEqual([{ path: '/api/jobs/job-1/cancel', body: {}, key: undefined },
+      { path: '/api/characters/from-image', body: { jobId: 'image-1', index: 2 }, key: undefined }]);
+    expect(h.parse(await h.run(['uploads'])).data).toMatchObject({ uploads: [{ id: 'upload-1', seconds: 8 }] });
+    expect((await h.run(['videos', '--kind', 'image', '--before', '2026-11-01T00:00:00.000Z'])).code).toBe(0);
+    expect(h.jobQueries.at(-1)).toBe('?kind=image&before=2026-11-01T00%3A00%3A00.000Z');
+    expect((await h.run(['videos', '--before', 'yesterday'])).code).toBe(2);
+  });
   it('generates without a prompt for models that take none, such as upscalers', async () => {
     await h.login();
     const result = await h.run(['generate', 'video', '--model', 'upscale-topaz', '--video', 'upload:upload-1', '--max-credits', '12',

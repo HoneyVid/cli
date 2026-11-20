@@ -287,7 +287,18 @@ export function cliHarness(register: (harness: CliHarness) => void) {
         if (url.pathname === '/api/jobs/quote') {
           return json({ credits: url.searchParams.get('quality') === 'high' ? 24 : 12, quality: url.searchParams.get('quality'), estimatedSeconds: 120, balance: 100 });
         }
-        if (request.method === 'POST' && ['/api/jobs', '/api/jobs/job-1/retry', '/api/playground/jobs', '/api/playground/images/jobs'].includes(url.pathname)) {
+        if (url.pathname === '/api/jobs/job-1/upscale' && request.method !== 'POST') {
+          return json({ available: true, options: [{ id: 'topaz', name: 'Topaz Starlight', description: 'Fine detail', targets: [{ target: '1080p', credits: 30 }, { target: '4k', credits: 60, estimatedMinutes: 4 }] }] });
+        }
+        if (request.method === 'POST' && ['/api/jobs/job-1/cancel', '/api/characters/from-image'].includes(url.pathname)) {
+          jobPosts.push({ path: url.pathname, body: bytes.length ? JSON.parse(bytes.toString()) : {}, key: undefined });
+          return url.pathname.endsWith('/cancel') ? json({ job: null, canceled: true, credits: 12 })
+            : json({ character: { id: 'char-gen', name: 'Generated image', imageUrl: 'https://example.test/gen.png' } }, 201);
+        }
+        if (url.pathname === '/api/uploads' && request.method !== 'POST') {
+          return json({ uploads: [{ id: 'upload-1', seconds: 8, videoUrl: `${base}/upload.mp4`, createdAt: '2026-11-01T00:00:00.000Z' }] });
+        }
+        if (request.method === 'POST' && ['/api/jobs', '/api/jobs/job-1/retry', '/api/jobs/job-1/upscale', '/api/playground/jobs', '/api/playground/images/jobs'].includes(url.pathname)) {
           const body: Record<string, unknown> = JSON.parse(bytes.toString());
           const key = request.headers['idempotency-key'];
           jobPosts.push({ path: url.pathname, body, key: Array.isArray(key) ? key[0] : key });
