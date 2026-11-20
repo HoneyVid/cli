@@ -84,8 +84,11 @@ honeyvid videos --status completed --limit 10
 honeyvid download '<job-id>'            # ./honeyvid-<id>.mp4
 honeyvid retry '<failed-job-id>' --max-credits 500 \
   --idempotency-key 'my-retry-001' --wait
+honeyvid retry '<failed-job-id>' --model kling-4-flash --max-credits 500 --wait
 honeyvid account                       # Credits, plan, topUpUrl
 ```
+
+Retry reuses the failed job's inputs. Without `--model` or `--pick` it runs the saved model; `--model` switches a Playground video, image or upscale job to another model ID and `--pick` switches a template or upload job to another choice. Quote the new model first and pass its price as `--max-credits`. Repeating the same job and choice never charges twice.
 
 Wait checks every five seconds and writes progress to stderr. A timeout stops waiting; it does not cancel generation. Output paths are absolute in results. The response Content-Type sets the file extension; a mismatched extension is replaced and the actual path is reported on stderr and in JSON. Downloads stream to a temporary file, never overwrite an existing destination, and remove partial files on failure. `--output` on create, video, or retry downloads after completion; add `--wait` if the video is processing.
 
@@ -98,7 +101,9 @@ honeyvid create --upload '<upload-id>' --character '<character-id>' \
   --quality standard --max-credits 500 --wait --output ./my-video.mp4
 ```
 
-Use an MP4 up to 100 MB and 3–30 seconds. Uploads stream as raw `video/mp4` with a content length, not multipart. Own-video generation may be unavailable for the account. Choose exactly one of `--template` and `--upload`.
+Use an MP4 up to 100 MB and 3–30 seconds. Uploads stream as raw `video/mp4` with a content length, not multipart. Choose exactly one of `--template` and `--upload`.
+
+Templates and uploads offer several models per quality. `template` and `quote` list them; add `--pick '<choice>'` to `quote` and `create` to use one other than the default.
 
 ## Playground flow
 
@@ -119,11 +124,13 @@ honeyvid generate image --model '<image-model-id>' --prompt 'A honey jar in warm
 honeyvid generate image --model '<image-model-id>' --prompt 'A honey jar in warm light' \
   --image '<character-id>' --max-credits 500 \
   --idempotency-key 'playground-image-001' --wait --output ./jar.png
+honeyvid generate video --model upscale-topaz --video 'upload:<upload-id>' \
+  --set resolution=4k --max-credits 500 --dry-run
 ```
 
 The settings above are examples; use fields returned by `models --model` for the selected model. Repeat `--set key=value` for each setting. Numbers (including decimals, negatives, and exponents) and lowercase `true`/`false` become JSON numbers and booleans. Other values stay strings. Duplicate setting keys are rejected. Video references accept `--image <character-id>[:start|end|ref]`; image generation accepts character IDs without roles. Repeat `--image` for more references. If the model accepts a source video, add `--video upload:<id>` or `--video template:<id>`.
 
-Both generate commands require `--model`, `--prompt`, and `--max-credits`, including for `--dry-run`. A dry run calls the free Playground quote endpoint and returns `credits`, `balance`, and `estimatedSeconds`; it creates no job. A real run sends the cap to the server. A price above it returns exit 5 without charging. Quotes do not reserve prices.
+Both generate commands require `--model` and `--max-credits`, including for `--dry-run`. Send `--prompt` for every model whose `prompt.required` is true; leave it out for models with a prompt limit of 0, such as the upscalers and Wan 2.2 Animate. A dry run calls the free Playground quote endpoint and returns `credits`, `balance`, and `estimatedSeconds`; it creates no job. A real run sends the cap to the server. A price above it returns exit 5 without charging. Quotes do not reserve prices.
 
 Generate prints a caller-supplied or generated idempotency key before submitting and returns it in success or error JSON. Reuse the same key and inputs after an uncertain outcome. Waiting and downloading work like template creation.
 
@@ -136,6 +143,31 @@ honeyvid video '<image-job-id>' --wait --output ./image.png
 Every job returned by create, generate, retry, video, or videos includes `accountUrl`. Share this lasting link with the user to open the saved result in their HoneyVid account after sign-in. `resultUrl` and image URLs are temporary links for previews and downloads; their expiry does not delete saved media. Read the job again to refresh them without generating or paying again.
 
 Image job output also includes image URLs. The first image is saved at `--output`; more images use `image-2.png`, `image-3.png`, and so on. Results include `path` for the first download and `paths` for all downloads. Existing files are preserved. In a terminal, `models` prints a compact table; `--model` prints the full schema. Piped output and `--json` always use JSON envelopes.
+
+## Edit videos live
+
+Combine your videos, images and character photos on a timeline in the HoneyVid editor. The user watches at the project's watch URL while the agent edits: every change appears in their browser as it lands, with the agent's notes. Export to MP4 happens in the browser; the user clicks export in the editor. Editing never spends credits.
+
+```sh
+honeyvid edit create --name 'Launch cut' --video '<job-id>' --source 'character:<character-id>'
+honeyvid edit open '<project-id>'            # Prints the watch URL; opens it in a terminal
+honeyvid edit show '<project-id>'            # Tracks and clips with ids, at/start/end in seconds
+honeyvid edit apply '<project-id>' --base-version 3 --note 'Tightened the intro' \
+  --ops '[{"type":"trim","clip":1,"start":0.5},{"type":"split","clip":2,"at":4}]'
+honeyvid edit apply '<project-id>' --ops @ops.json
+cat ops.json | honeyvid edit apply '<project-id>' --ops -
+honeyvid edit note '<project-id>' 'Adding the outro next' --tone info
+honeyvid edit list
+```
+
+Every edit command returns `watchUrl` (`<base>/editor/<id>`). Give it to the user first, so they can watch. `edit create` makes the project, then appends each `--video <job-id>` (source key `job:<id>`) and `--source <key>` in the order given, in one request. Source keys are `job:<id>`, `image:<jobId>:<i>`, `character:<id>`, and `file:<id>` (a file stored in the project).
+
+Read before editing: `edit show` prints the timeline in a terminal and the full state, including `version`, as JSON. `edit apply` sends 1–50 ops (up to 64 KB) as a JSON array, a single op, or `{ops:[...]}`, inline, from `@file`, or from stdin with `-`. It returns `summaries`, the new `version`, and the `changed` clip and track ids. Ops:
+
+- `{"type":"add_clip","key":"job:<id>","track":"fit","at":0,"start":0,"end":5}`: `track` is a track id, `"new"` or `"fit"` (default); `at` defaults to the end of the timeline. A `file:` video or audio not yet on the timeline needs `end`. Stills default to 5 seconds. A video with sound also places its audio.
+- `{"type":"split","clip":1,"at":2.5}`, `{"type":"delete","clips":[1,2]}`, `{"type":"move","clip":1,"at":4,"track":2}`, `{"type":"trim","clip":1,"start":0.5,"end":3}`, `{"type":"level","track":2,"volume":0.5,"muted":false}`.
+
+Ops apply atomically. An invalid op fails with code `invalid_op`, its `index`, and nothing is written. With `--base-version`, a project changed by the user or another agent fails with code `stale` (exit 5) and the current `version`: run `edit show`, then apply again. Agents may apply up to 120 ops per minute per project; beyond that, exit 5 with `rate_limited` and `retryAfter`. There are no undo ops; the user can undo in the browser.
 
 ## Agent skills
 
@@ -166,9 +198,9 @@ Failures print one envelope to stdout and exit nonzero:
 {"ok":false,"error":{"code":"not_signed_in","message":"You are not signed in.","suggestion":"Run honeyvid login.","retryable":false}}
 ```
 
-Errors can also contain `idempotencyKey`, `jobId`, and `retryAfter` (seconds). `retryable` describes the error; the CLI does not automatically retry it. Never parse stderr as data. Help is plain text. `schema` returns all commands, flags, enums, constraints, output shapes, environment variables, and exit codes in `data`. Every command has `--help`, examples, environment variables, and exit codes.
+Errors can also contain `idempotencyKey`, `jobId`, `retryAfter` (seconds), and for edit commands `projectId`, `watchUrl`, `version` (on `stale`) and `index` (on `invalid_op`). `retryable` describes the error; the CLI does not automatically retry it. Never parse stderr as data. Help is plain text. `schema` returns all commands, flags, enums, constraints, output shapes, environment variables, and exit codes in `data`. Every command has `--help`, examples, environment variables, and exit codes.
 
-Known API error codes are `price_above_max` (409 with credits), `insufficient_credits` (402), `rate_limited` (429), `generation_closed`, `not_found` (404), and `forbidden` (403). Their exit codes follow the table below: credit, limit and conflict errors use 5; forbidden uses 1.
+Known API error codes are `price_above_max` (409 with credits), `insufficient_credits` (402), `rate_limited` (429), `generation_closed`, `stale` (409 edit conflict), `invalid_op` (400 edit op), `not_found` (404), and `forbidden` (403). Their exit codes follow the table below: credit, limit and conflict errors use 5; forbidden uses 1.
 
 | Exit | Meaning | Agent action |
 | --- | --- | --- |

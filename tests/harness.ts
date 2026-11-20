@@ -8,7 +8,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { format } from 'node:util';
 import { afterEach, beforeEach, describe, expect, vi } from 'vitest';
 import { main } from '../bin/honeyvid.mjs';
-import { media, playgroundModels, template } from './fixtures';
+import { editDoc, editProject, media, playgroundModels, template } from './fixtures';
 import { mockPollingClock } from './clock';
 
 vi.mock('node:timers/promises', async importOriginal => {
@@ -44,6 +44,8 @@ interface CliHarness {
   postKeys: (string | undefined)[]; loginPollStatuses: number[]; loginStates: string[]; slowJobBody: boolean; slowJobBodyAfter: number;
   strictRefresh: boolean; refreshConsumed: boolean; playgroundQuotes: Record<string, unknown>[]; jobQueries: string[];
   forcedError: { status: number; body: Record<string, unknown> } | undefined; imageContentType: string;
+  editPosts: { path: string; body: Record<string, unknown> }[];
+  editError: { status: number; body: Record<string, unknown>; headers?: Record<string, string> } | undefined;
   run(args: string[], extraEnv?: Record<string, string>, nodeArgs?: string[]): Promise<Result>;
   runSpawn(args: string[], extraEnv?: Record<string, string>, nodeArgs?: string[], entry?: string): Promise<Result>;
   parse(result: Result): Envelope; startedData(result: Result): Envelope; authPath(): string;
@@ -77,6 +79,8 @@ export function cliHarness(register: (harness: CliHarness) => void) {
   let jobQueries: string[];
   let forcedError: { status: number; body: Record<string, unknown> } | undefined;
   let imageContentType: string;
+  let editPosts: { path: string; body: Record<string, unknown> }[];
+  let editError: { status: number; body: Record<string, unknown>; headers?: Record<string, string> } | undefined;
 
   function captureAuthorization(args: string[], stdout: string) {
     const first = stdout.split('\n')[0];
@@ -184,6 +188,8 @@ export function cliHarness(register: (harness: CliHarness) => void) {
     jobQueries = [];
     forcedError = undefined;
     imageContentType = 'image/png';
+    editPosts = [];
+    editError = undefined;
     server = createServer(async (request, response) => {
       try {
         const url = new URL(request.url ?? '/', base);
@@ -308,6 +314,23 @@ export function cliHarness(register: (harness: CliHarness) => void) {
             ? [{ id: 'image-1', status: 'completed', kind: 'image', credits: 12, images: [`${base}/result.png`] }]
             : [{ id: 'job-1', status: queuedCreate ? 'queued' : 'completed', credits: 12, resultUrl: `${base}/result.mp4` }] });
         }
+        if (url.pathname === '/api/edits') {
+          if (request.method !== 'POST') return json({ projects: [editProject] });
+          editPosts.push({ path: url.pathname, body: JSON.parse(bytes.toString()) });
+          return json({ project: { ...editProject, version: 1 } }, 201);
+        }
+        if (url.pathname === '/api/edits/edit-1') return json({ project: { ...editProject, doc: editDoc } });
+        if (request.method === 'POST' && ['/api/edits/edit-1/actions', '/api/edits/edit-1/notes'].includes(url.pathname)) {
+          editPosts.push({ path: url.pathname, body: JSON.parse(bytes.toString()) });
+          if (editError) {
+            response.writeHead(editError.status, { 'content-type': 'application/json', ...editError.headers });
+            return response.end(JSON.stringify(editError.body));
+          }
+          if (url.pathname.endsWith('/notes')) { response.writeHead(204); return response.end(); }
+          const { ops } = JSON.parse(bytes.toString()) as { ops: { type: string }[] };
+          return json({ version: editProject.version + 1, doc: editDoc, summaries: ops.map((op, index) => `${op.type} ${index}`),
+            changed: { clipIds: [3], trackIds: [1] } });
+        }
         if (url.pathname === '/api/uploads' && request.method === 'POST') {
           uploads.push({ contentType: request.headers['content-type'], length: request.headers['content-length'], bytes });
           return json({ upload: { id: 'upload-1', seconds: 5, qualities: template.qualities } }, 201);
@@ -381,6 +404,10 @@ export function cliHarness(register: (harness: CliHarness) => void) {
     set forcedError(value: typeof forcedError) { forcedError = value; },
     get imageContentType() { return imageContentType; },
     set imageContentType(value: typeof imageContentType) { imageContentType = value; },
+    get editPosts() { return editPosts; },
+    set editPosts(value: typeof editPosts) { editPosts = value; },
+    get editError() { return editError; },
+    set editError(value: typeof editError) { editError = value; },
     get run() { return run; },
     get runSpawn() { return runSpawn; },
     get parse() { return parse; },
